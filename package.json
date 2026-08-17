@@ -1,5 +1,5 @@
 {
-  "name": "dsh-sonic",
+  "name": "@xjwwjx/dsh-sonic",
   "description": "Sound notification plugin for DeepSeek Harness Web: plays a chime when user confirmation is needed and a success sound when tasks complete; pick from 8 synthesized sound effects in Settings → General.",
   "version": "0.2.0",
   "private": true,
