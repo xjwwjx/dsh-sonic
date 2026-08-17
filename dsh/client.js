@@ -14,7 +14,7 @@
 //      selections to the host (POST /sonic/state) so they survive page
 //      reloads and stay readable via the `sonic_status` model tool.
 window.__ModuleLoader__.load({
-  id: 'dsh-sonic',
+  id: '@xjwwjx/dsh-sonic',
   factory: function (require) {
     var module = { exports: {} }
     var exports = module.exports
