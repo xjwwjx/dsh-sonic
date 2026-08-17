@@ -1,0 +1,6 @@
+# dsh-sonic bundle layer: mount the sound-notification plugin.
+# Applied automatically when "dsh-sonic" is listed in the profile's
+# dsh.profile.bundles (same mechanism as @liustack/modlens).
+- insert:
+    - id: dsh-sonic
+      name: dsh-sonic
