@@ -1,6 +1,6 @@
 # dsh-sonic 🔔 音效提醒
 
-> 音效提醒插件（动态 Cordis Plugin）—— 当需要用户确认或任务完成时，在浏览器端播放提示音效。
+> 音效提醒插件 —— 当需要用户确认或任务完成时，在浏览器端播放提示音效。
 > 面向 [DeepSeek Harness](https://github.com/deepseek-ai/DeepSeek-Harness) Web。
 
 ## 功能
@@ -20,7 +20,7 @@
 | 注意 | `alarm` | 提醒双音 |
 | 木琴 | `marimba` | 木琴敲击 |
 
-- **Run 卡片内选择面板**：一键静音、音量滑块、分别挑选「确认音 / 完成音」，点击即试听
+- **设置面板**（设置 → 通用）：一键静音、音量滑块、分别挑选「确认音 / 完成音」，点击即试听；选择自动保存并同步给模型
 - **模型工具**：
   - `sonic_play` —— 立即播放指定音效（试听/演示）
   - `sonic_status` —— 读取当前面板选择状态
@@ -28,34 +28,44 @@
 ## 工作原理
 
 ```
-┌─ Host (Node.js) ──────────────────────────────────┐
-│  approval/request ─┐                              │
-│  ask_user_question ─┼─► 通知队列 ──┬── drain ◄────┼──┐  每 1s 轮询
-│  agent/status idle ─┘              │              │  │
-│                    report-state ◄──┼──── 面板选择 ─┼──┘
-│                    sonic_play ─────┘              │
-└───────────────────────────────────────────────────┘
-        ┌───────────────────────────────────────────┐
-        │ 浏览器 (Client)                            │
-        │  轮询 drain → 按事件播放对应音效            │
-        │  Web Audio 合成 8 种音效                   │
-        │  Run 卡片内选择面板（tool.view.cordis）     │
-        └───────────────────────────────────────────┘
+┌─ Host (宿主组合内静态插件) ───────────────────────┐
+│  approval/request ─┐                             │
+│  ask_user_question ─┼─► 通知队列 ──┬─ GET /sonic/drain ──┐
+│  agent/status idle ─┘              │  (webServer 路由)   │
+│                  POST /sonic/state ◄── 面板选择 ─────────┤
+│                  sonic_play (工具) ─┘                     │
+└──────────────────────────────────────────────────────────┘
+        ┌──────────────────────────────────────────────────┐
+        │ 浏览器 (Client)                                   │
+        │  每 1s 轮询 /sonic/drain → 播放对应音效           │
+        │  Web Audio 合成 8 种音效                          │
+        │  设置 → 通用 内的选择面板（settings.general.item）│
+        └──────────────────────────────────────────────────┘
 ```
 
-## 使用方式（动态插件）
+## 安装（永久挂载）
 
-这是一个**动态 Cordis 插件**：不需要构建、不需要安装依赖，直接把 `src/host.js` 与 `src/client.js` 的内容分别作为 `code.host` / `code.client` 通过 `cordis_define` 定义，再 `cordis_run` 激活即可。
+作为一个 **bundle 插件**随 Web profile 自动加载（机制与 `@liustack/modlens` 相同）：
 
-首次激活会请求授权；批准后浏览器端加载完成，音效即刻生效。
+1. 把本包链接进 profile：在 `~/.dsh/profiles/web/package.json` 的 `dependencies` 加
+   `"dsh-sonic": "file:<本包路径>"`，并在 `dsh.profile.bundles` 列表加 `"dsh-sonic"`
+2. 在 profile 目录执行 `pnpm install`（生成本包的链接）
+3. 重启 DeepSeek Harness Web —— 插件随组合自动加载，进程重启后依然在
+
+`cordis.patch.yml` 会自动插入插件行（`- id: dsh-sonic, name: dsh-sonic`）。
+
+> 动态版（会话内 `cordis_define` 加载）的源码保留在 `examples/dynamic-host.js` 与
+> `examples/dynamic-client.js`，仅作参考；动态版在进程重启后会丢失，静态版不会。
 
 ## 文件结构
 
 ```
 dsh-sonic/
-├── src/
-│   ├── host.js      # Host 半体（事件监听、通知队列、模型工具）
-│   └── client.js    # 浏览器半体（Web Audio 音效、轮询、选择面板）
+├── dsh/
+│   ├── index.js      # Host 半体（事件监听、通知队列、webServer 路由、模型工具）
+│   └── client.js     # 浏览器半体（Web Audio 音效、轮询、设置面板）
+├── examples/         # 动态版源码（参考）
+├── cordis.patch.yml  # bundle 插件行补丁
 ├── package.json
 ├── README.md
 └── LICENSE
@@ -63,7 +73,7 @@ dsh-sonic/
 
 ## 自定义音效
 
-音效是 Web Audio 合成的一组音符（`PRESETS`，见 `src/client.js`），每个音符支持：
+音效是 Web Audio 合成的一组音符（`PRESETS`，见 `dsh/client.js`），每个音符支持：
 
 - `freq` / `endFreq` —— 起始/结束频率（滑音）
 - `at` / `dur` —— 开始时间与时长
