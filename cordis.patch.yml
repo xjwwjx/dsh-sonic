@@ -3,4 +3,4 @@
 # dsh.profile.bundles (same mechanism as @liustack/modlens).
 - insert:
     - id: dsh-sonic
-      name: dsh-sonic
+      name: '@xjwwjx/dsh-sonic'
